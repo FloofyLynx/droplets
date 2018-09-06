@@ -5,7 +5,7 @@
 (defn -main [& args]
   (println ""))
 
-(def hue 51)
+(def hue 200)
 
 (defn draw-circle [circle]
   (let [{radius :radius
@@ -16,25 +16,31 @@
         (q/ellipse x y (* 2 radius) (* 2 radius)))))
 
 (defn create-circle []
-  (let [radius (q/random 5 10)
+  (let [radius (q/random 10 20)
         x (q/random radius (- (q/width) radius))
         y (q/random radius (- (q/height) radius))
-        color [(q/random (- hue 20) (+ hue 20)) (q/random 180 220) (q/random 180 220)]]
+        color [(q/random (- hue 40) (+ hue 40)) (q/random 160 200) (q/random 160 200)]]
     {:radius radius :x x :y y :color color}))
+
+(defn update-position [circle]
+  (let [{x :x
+         y :y} circle]
+    (assoc (assoc circle :y (+ y (q/cos x) (q/sin x))) :x (+ x (q/sin y) (q/cos y)))))
 
 (defn setup []
   (q/no-stroke)
   (q/frame-rate 60)
   (q/color-mode :hsb)
   (q/background 240)
-  {:circles [(create-circle)]})
+  [])
 
 (defn update-state [state]
-  (let [circle (get (get state :circles) 0)]
-    {:circles [(update circle :radius inc)]}))
+  (map update-position (conj state (create-circle))))
 
 (defn draw [state]
-  (draw-circle (get (get state :circles) 0)))
+  (q/background 240)
+  (doseq [circle state]
+    (draw-circle circle)))
 
 (q/defsketch droplets
   :title "Droplets"
