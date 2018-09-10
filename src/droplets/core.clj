@@ -6,6 +6,7 @@
   (println ""))
 
 (def hue 200)
+(def avg-size 10)
 
 (defn draw-circle [circle]
   (let [{radius :radius
@@ -15,17 +16,31 @@
     (q/with-fill color
         (q/ellipse x y (* 2 radius) (* 2 radius)))))
 
-(defn create-circle []
-  (let [radius (q/random 10 20)
-        x (q/random radius (- (q/width) radius))
-        y (q/random radius (- (q/height) radius))
-        color [(q/random (- hue 40) (+ hue 40)) (q/random 160 200) (q/random 160 200)]]
+(defn create-circle
+  ([]
+    (let [radius (q/random (- avg-size 5) (+ avg-size 5))
+          x (q/random radius (- (q/width) radius))
+          y (q/random radius (- (q/height) radius))]
+      (create-circle radius x y)))
+  ([radius x y]
+    (let [color [(q/random (- hue 40) (+ hue 40)) (q/random 160 200) (q/random 160 200)]]
+      (create-circle x y color radius)))
+  ([x y color radius]
     {:radius radius :x x :y y :color color}))
 
-(defn update-position [circle]
-  (let [{x :x
-         y :y} circle]
-    (assoc (assoc circle :y (+ y (q/cos x) (q/sin x))) :x (+ x (q/sin y) (q/cos y)))))
+(defn intersects [circle1 circle2]
+  (let [dist (q/dist (:x circle1) (:y circle1) (:x circle2) (:y circle2))]
+    (< dist (+ (:radius circle1) (:radius circle2)))))
+
+(defn area [circle]
+  (* (:radius circle) (:radius circle) (Math/PI)))
+
+(defn merge-circles [circles]
+  (let [total-area (reduce + (map area circles))
+        new-radius (Math/sqrt (/ total-area (Math/PI)))
+        new-x (/ (reduce + (map :x circles)) (count circles))
+        new-y (/ (reduce + (map :y circles)) (count circles))]
+    (create-circle new-radius new-x new-y)))
 
 (defn setup []
   (q/no-stroke)
@@ -35,7 +50,10 @@
   [])
 
 (defn update-state [state]
-  (map update-position (conj state (create-circle))))
+  (let [new-circle (create-circle)
+        intersections (filter #(intersects new-circle %) state)
+        circle-to-add (if (> (count intersections) 0) (merge-circles intersections) new-circle)]
+    (conj (remove (set intersections) state) circle-to-add)))
 
 (defn draw [state]
   (q/background 240)
