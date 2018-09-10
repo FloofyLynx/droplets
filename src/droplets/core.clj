@@ -42,6 +42,13 @@
         new-y (/ (reduce + (map :y circles)) (count circles))]
     (create-circle new-radius new-x new-y)))
 
+(defn add-circle [all-circles new-circle]
+  (let [intersections (filter #(intersects new-circle %) all-circles)]
+    (if (> (count intersections) 0)
+      (add-circle (remove (set intersections) all-circles) (merge-circles (conj intersections new-circle)))
+      (conj all-circles new-circle))))
+
+
 (defn setup []
   (q/no-stroke)
   (q/frame-rate 60)
@@ -50,10 +57,7 @@
   [])
 
 (defn update-state [state]
-  (let [new-circle (create-circle)
-        intersections (filter #(intersects new-circle %) state)
-        circle-to-add (if (> (count intersections) 0) (merge-circles intersections) new-circle)]
-    (conj (remove (set intersections) state) circle-to-add)))
+  (add-circle state (create-circle)))
 
 (defn draw [state]
   (q/background 240)
