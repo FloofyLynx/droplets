@@ -6,7 +6,8 @@
   (println ""))
 
 (def hue 200)
-(def avg-size 10)
+(def avg-size 30)
+(def variance 1)
 
 (defn draw-circle [circle]
   (let [{radius :radius
@@ -18,14 +19,12 @@
 
 (defn create-circle
   ([]
-    (let [radius (q/random (- avg-size 5) (+ avg-size 5))
+    (let [radius (q/random (- avg-size variance) (+ avg-size variance))
           x (q/random radius (- (q/width) radius))
-          y (q/random radius (- (q/height) radius))]
-      (create-circle radius x y)))
-  ([radius x y]
-    (let [color [(q/random (- hue 40) (+ hue 40)) (q/random 160 200) (q/random 160 200)]]
-      (create-circle x y color radius)))
-  ([x y color radius]
+          y (q/random radius (- (q/height) radius))
+          color [(q/random (- hue 40) (+ hue 40)) (q/random 160 200) (q/random 160 200)]]
+      (create-circle radius x y color)))
+  ([radius x y color]
     {:radius radius :x x :y y :color color}))
 
 (defn intersects [circle1 circle2]
@@ -35,12 +34,18 @@
 (defn area [circle]
   (* (:radius circle) (:radius circle) (Math/PI)))
 
+(defn total-area [circles]
+  (reduce + (map area circles)))
+
+(defn calc-midpoint [circles]
+  {:x (/ (reduce + (map #(* (area %) (:x %)) circles)) (total-area circles))
+   :y (/ (reduce + (map #(* (area %) (:y %)) circles)) (total-area circles))})
+
 (defn merge-circles [circles]
-  (let [total-area (reduce + (map area circles))
-        new-radius (Math/sqrt (/ total-area (Math/PI)))
-        new-x (/ (reduce + (map :x circles)) (count circles))
-        new-y (/ (reduce + (map :y circles)) (count circles))]
-    (create-circle new-radius new-x new-y)))
+  (let [new-radius (Math/sqrt (/ (total-area circles) (Math/PI)))
+        new-loc (calc-midpoint circles)
+        new-color (:color (apply max-key #(area %) circles))]
+    (create-circle new-radius (:x new-loc) (:y new-loc) new-color)))
 
 (defn add-circle [all-circles new-circle]
   (let [intersections (filter #(intersects new-circle %) all-circles)]
