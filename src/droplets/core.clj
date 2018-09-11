@@ -6,8 +6,9 @@
   (println ""))
 
 (def hue 200)
-(def avg-size 30)
+(def avg-size 5)
 (def variance 1)
+(def drop-area 1000)
 
 (defn draw-circle [circle]
   (let [{radius :radius
@@ -25,7 +26,7 @@
           color [(q/random (- hue 40) (+ hue 40)) (q/random 160 200) (q/random 160 200)]]
       (create-circle radius x y color)))
   ([radius x y color]
-    {:radius radius :x x :y y :color color}))
+    {:radius radius :x x :y y :color color :drop-vel 0}))
 
 (defn intersects [circle1 circle2]
   (let [dist (q/dist (:x circle1) (:y circle1) (:x circle2) (:y circle2))]
@@ -53,6 +54,11 @@
       (add-circle (remove (set intersections) all-circles) (merge-circles (conj intersections new-circle)))
       (conj all-circles new-circle))))
 
+(defn update-positions [circles]
+  (map #(assoc % :y (+ (:y %) (:drop-vel %))) circles))
+
+(defn check-sizes [circles]
+  (map #(assoc % :drop-vel (if (> (area %) drop-area) 10 0)) circles))
 
 (defn setup []
   (q/no-stroke)
@@ -62,7 +68,7 @@
   [])
 
 (defn update-state [state]
-  (add-circle state (create-circle)))
+  (update-positions (check-sizes (add-circle state (create-circle)))))
 
 (defn draw [state]
   (q/background 240)
