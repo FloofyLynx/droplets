@@ -6,7 +6,7 @@
   (println ""))
 
 (def hue 200)
-(def avg-size 5)
+(def avg-size 10)
 (def variance 1)
 (def drop-area 1000)
 
@@ -32,6 +32,9 @@
   (let [dist (q/dist (:x circle1) (:y circle1) (:x circle2) (:y circle2))]
     (< dist (+ (:radius circle1) (:radius circle2)))))
 
+(defn all-intersections [circle circles]
+  (filter #(intersects circle %) circles))
+
 (defn area [circle]
   (* (:radius circle) (:radius circle) (Math/PI)))
 
@@ -43,16 +46,17 @@
    :y (/ (reduce + (map #(* (area %) (:y %)) circles)) (total-area circles))})
 
 (defn merge-circles [circles]
-  (let [new-radius (Math/sqrt (/ (total-area circles) (Math/PI)))
-        new-loc (calc-midpoint circles)
-        new-color (:color (apply max-key #(area %) circles))]
-    (create-circle new-radius (:x new-loc) (:y new-loc) new-color)))
+   (let [new-radius (Math/sqrt (/ (total-area circles) (Math/PI)))
+         new-loc (calc-midpoint circles)
+         new-color (:color (apply max-key #(area %) circles))]
+     (create-circle new-radius (:x new-loc) (:y new-loc) new-color)))
 
-(defn add-circle [all-circles new-circle]
-  (let [intersections (filter #(intersects new-circle %) all-circles)]
-    (if (> (count intersections) 0)
-      (add-circle (remove (set intersections) all-circles) (merge-circles (conj intersections new-circle)))
-      (conj all-circles new-circle))))
+(defn check-merges [circles]
+  (let [to-merge (filter #(> (count %) 1) (map #(all-intersections % circles) circles))
+        to-add (map #(merge-circles %) to-merge)]
+    (if (= (count to-merge) 0)
+      circles
+      (remove (set (flatten to-merge)) (concat circles to-add)))))
 
 (defn update-positions [circles]
   (map #(assoc % :y (+ (:y %) (:drop-vel %))) circles))
@@ -68,7 +72,11 @@
   [])
 
 (defn update-state [state]
-  (update-positions (check-sizes (add-circle state (create-circle)))))
+  (->> state
+       (cons (create-circle))
+       check-sizes
+       update-positions
+       check-merges))
 
 (defn draw [state]
   (q/background 240)
